@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1366</width>
-    <height>768</height>
+    <width>1920</width>
+    <height>1080</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -23,7 +23,7 @@ background-color: rgb(0, 85, 127);</string>
      <rect>
       <x>0</x>
       <y>0</y>
-      <width>1391</width>
+      <width>1921</width>
       <height>71</height>
      </rect>
     </property>
@@ -33,13 +33,13 @@ color: rgb(0, 85, 127);
 background-color: rgb(85, 170, 127);</string>
     </property>
     <property name="plainText">
-     <string>CRIPAC Gait Demo V1.0</string>
+     <string>ACTION Gait Recognition V1.0</string>
     </property>
    </widget>
    <widget class="QPlainTextEdit" name="plainTextEdit">
     <property name="geometry">
      <rect>
-      <x>1150</x>
+      <x>1690</x>
       <y>20</y>
       <width>211</width>
       <height>41</height>
@@ -56,32 +56,11 @@ color: rgb(0, 85, 127);</string>
      <string>Powered by DEVELOP</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="recognize">
-    <property name="geometry">
-     <rect>
-      <x>1160</x>
-      <y>310</y>
-      <width>191</width>
-      <height>61</height>
-     </rect>
-    </property>
-    <property name="styleSheet">
-     <string notr="true">color: rgb(0, 85, 127);
-selection-background-color: rgb(85, 170, 127);
-background-color: rgb(255, 255, 255);
-border-color: rgb(0, 85, 127);
-alternate-background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(0, 0, 0, 255), stop:1 rgba(255, 255, 255, 255));
-alternate-background-color: rgb(0, 85, 127);</string>
-    </property>
-    <property name="text">
-     <string>Recognize</string>
-    </property>
-   </widget>
    <widget class="QTextEdit" name="state_print">
     <property name="geometry">
      <rect>
-      <x>180</x>
-      <y>570</y>
+      <x>450</x>
+      <y>900</y>
       <width>151</width>
       <height>61</height>
      </rect>
@@ -92,53 +71,11 @@ color: rgb(255, 0, 0);
 background-color: rgb(85, 170, 127);</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="save_gei">
-    <property name="geometry">
-     <rect>
-      <x>1160</x>
-      <y>220</y>
-      <width>191</width>
-      <height>61</height>
-     </rect>
-    </property>
-    <property name="styleSheet">
-     <string notr="true">color: rgb(0, 85, 127);
-selection-background-color: rgb(85, 170, 127);
-background-color: rgb(255, 255, 255);
-border-color: rgb(0, 85, 127);
-alternate-background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(0, 0, 0, 255), stop:1 rgba(255, 255, 255, 255));
-alternate-background-color: rgb(0, 85, 127);</string>
-    </property>
-    <property name="text">
-     <string>Save</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="register_2">
-    <property name="geometry">
-     <rect>
-      <x>1160</x>
-      <y>130</y>
-      <width>191</width>
-      <height>61</height>
-     </rect>
-    </property>
-    <property name="styleSheet">
-     <string notr="true">color: rgb(0, 85, 127);
-selection-background-color: rgb(85, 170, 127);
-background-color: rgb(255, 255, 255);
-border-color: rgb(0, 85, 127);
-alternate-background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(0, 0, 0, 255), stop:1 rgba(255, 255, 255, 255));
-alternate-background-color: rgb(0, 85, 127);</string>
-    </property>
-    <property name="text">
-     <string>Register</string>
-    </property>
-   </widget>
    <widget class="QPlainTextEdit" name="plainTextEdit_2">
     <property name="geometry">
      <rect>
-      <x>40</x>
-      <y>570</y>
+      <x>310</x>
+      <y>900</y>
       <width>131</width>
       <height>61</height>
      </rect>
@@ -150,8 +87,8 @@ alternate-background-color: rgb(0, 85, 127);</string>
    <widget class="QPlainTextEdit" name="plainTextEdit_3">
     <property name="geometry">
      <rect>
-      <x>343</x>
-      <y>570</y>
+      <x>613</x>
+      <y>900</y>
       <width>131</width>
       <height>61</height>
      </rect>
@@ -163,8 +100,8 @@ alternate-background-color: rgb(0, 85, 127);</string>
    <widget class="QTextEdit" name="id_name">
     <property name="geometry">
      <rect>
-      <x>480</x>
-      <y>570</y>
+      <x>750</x>
+      <y>900</y>
       <width>221</width>
       <height>61</height>
      </rect>
@@ -178,8 +115,8 @@ background-color: rgb(85, 170, 127);</string>
    <widget class="QPlainTextEdit" name="plainTextEdit_4">
     <property name="geometry">
      <rect>
-      <x>710</x>
-      <y>570</y>
+      <x>980</x>
+      <y>900</y>
       <width>111</width>
       <height>61</height>
      </rect>
@@ -191,8 +128,8 @@ background-color: rgb(85, 170, 127);</string>
    <widget class="QTextEdit" name="id_num">
     <property name="geometry">
      <rect>
-      <x>830</x>
-      <y>570</y>
+      <x>1100</x>
+      <y>900</y>
       <width>151</width>
       <height>61</height>
      </rect>
@@ -203,26 +140,101 @@ color: rgb(255, 0, 0);
 background-color: rgb(85, 170, 127);</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="updater">
+   <widget class="QWidget" name="verticalLayoutWidget">
     <property name="geometry">
      <rect>
-      <x>1160</x>
-      <y>400</y>
-      <width>191</width>
-      <height>61</height>
+      <x>1560</x>
+      <y>150</y>
+      <width>341</width>
+      <height>811</height>
      </rect>
     </property>
-    <property name="styleSheet">
-     <string notr="true">color: rgb(0, 85, 127);
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QPushButton" name="register_2">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">color: rgb(0, 85, 127);
 selection-background-color: rgb(85, 170, 127);
 background-color: rgb(255, 255, 255);
 border-color: rgb(0, 85, 127);
 alternate-background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(0, 0, 0, 255), stop:1 rgba(255, 255, 255, 255));
 alternate-background-color: rgb(0, 85, 127);</string>
-    </property>
-    <property name="text">
-     <string>Update Bk</string>
-    </property>
+       </property>
+       <property name="text">
+        <string>Register</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="save_gei">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">color: rgb(0, 85, 127);
+selection-background-color: rgb(85, 170, 127);
+background-color: rgb(255, 255, 255);
+border-color: rgb(0, 85, 127);
+alternate-background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(0, 0, 0, 255), stop:1 rgba(255, 255, 255, 255));
+alternate-background-color: rgb(0, 85, 127);</string>
+       </property>
+       <property name="text">
+        <string>Save</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="recognize">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">color: rgb(0, 85, 127);
+selection-background-color: rgb(85, 170, 127);
+background-color: rgb(255, 255, 255);
+border-color: rgb(0, 85, 127);
+alternate-background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(0, 0, 0, 255), stop:1 rgba(255, 255, 255, 255));
+alternate-background-color: rgb(0, 85, 127);</string>
+       </property>
+       <property name="text">
+        <string>Recognize</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="updater">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">color: rgb(0, 85, 127);
+selection-background-color: rgb(85, 170, 127);
+background-color: rgb(255, 255, 255);
+border-color: rgb(0, 85, 127);
+alternate-background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(0, 0, 0, 255), stop:1 rgba(255, 255, 255, 255));
+alternate-background-color: rgb(0, 85, 127);</string>
+       </property>
+       <property name="text">
+        <string>Update Bk</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -230,8 +242,8 @@ alternate-background-color: rgb(0, 85, 127);</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1366</width>
-     <height>47</height>
+     <width>1920</width>
+     <height>53</height>
     </rect>
    </property>
   </widget>
