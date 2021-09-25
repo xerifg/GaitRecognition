@@ -8,6 +8,7 @@ import os
 import pickle
 import realsense_depth as rsd
 import time
+import PoseTrackingModel as ptk
 
 # Loading the UI window
 qtCreatorFile = "GaitUI.ui"
@@ -42,13 +43,14 @@ class GaitDemo(QtWidgets.QMainWindow, Ui_MainWindow):
         self.capture = rsd.DepthCamera()  # through D435 camera
         # self.capture = cv2.VideoCapture(0)  # through computer cam
         self.currentFrame = np.array([])
-        self.firstFrame = None
+        self.thresh = np.array([])
         self.register_state = False
         self.recognition_state = False
         self.save_on = False
         self.gei_fix_num = 20  # the number of calculate GEI
         self.cTime = 0
         self.pTime = 0
+        self.detector = ptk.PoseDetector()
 
         # Set two window for raw video and segmentation.
         self.video_lable = QtWidgets.QLabel(self.centralwidget)
@@ -62,10 +64,9 @@ class GaitDemo(QtWidgets.QMainWindow, Ui_MainWindow):
         # Waiting for you to push the button.
         # The slot functions from Qt
         self.register_2.clicked.connect(self.register_show)
-        self.recognize.clicked.connect(self.recognition_show)
-        self.updater.clicked.connect(self.update_bk)
         self.save_gei.clicked.connect(self.save_gei_f)
-        self._timer.start(27)  # the end time of Qt timer
+        self.recognize.clicked.connect(self.recognition_show)
+        self._timer.start(27)  # the end time of Qt timer, it means get a frame to synthesis GEI every about 27 ms
         self.update()
 
     def save_gei_f(self):
@@ -114,11 +115,6 @@ class GaitDemo(QtWidgets.QMainWindow, Ui_MainWindow):
         self.numInGEI = 0
         self.state_print.setText('Recognition!')
 
-    def update_bk(self):
-        '''
-        If you moved the camera.
-        '''
-        self.firstFrame = self.FrameForUpdate
 
     def play(self):
         '''
@@ -130,101 +126,98 @@ class GaitDemo(QtWidgets.QMainWindow, Ui_MainWindow):
             # frame = cv2.resize(frame, (512, 384))
             # Apply background subtraction method.
             """####################  preprocess  ########################"""
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # bgr to gray
-            gray = cv2.GaussianBlur(gray, (3, 3), 0)
-            if self.firstFrame is None:
-                self.firstFrame = gray  # Set this frame as the background.
-            frameDelta = cv2.absdiff(self.firstFrame, gray)
-            thresh = cv2.threshold(frameDelta, 50, 255, cv2.THRESH_BINARY)[1]
-            self.FrameForUpdate = gray
-            thresh = cv2.dilate(thresh, None, iterations=2)  # dilate image123
-            (cnts, _) = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
-                                         cv2.CHAIN_APPROX_SIMPLE)  # Contour detection
-            thresh = np.array(thresh)
+            # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # bgr to gray
+            # gray = cv2.GaussianBlur(gray, (3, 3), 0)
+            img_pose = self.detector.findPose(frame)  # get pose from frame
+            # remove background and create Silhouettes
+            annotated_image = np.zeros((480, 640), dtype=np.uint8)
+            try:
+                mask = self.detector.results.segmentation_mask  # dtype:float32
+                condition = mask > 0.5  # element type is bool  threshold:0.5
+                annotated_image[:] = 255
+                bg_image = np.zeros(mask.shape, dtype=np.uint8)
+                self.thresh = np.where(condition, annotated_image, bg_image)
+                # cv2.imshow("Silhouettes", annotated_image)
+            except TypeError:
+                print("Fail to capture human pose")
+            # self.thresh = cv2.dilate(self.thresh, None, iterations=2)  # dilate image
+            # self.thresh = cv2.erode(self.thresh, None, iterations=2)
             max_rec = 0
             #####################################################################
             # Find the max box.
-            for c in cnts:
-                if cv2.contourArea(c) < 500:
-                    continue
-                (x, y, w, h) = cv2.boundingRect(c)
-
-                if w > 25 and h > 50:
-                    if max_rec < w * h:
-                        max_rec = w * h
-                        (x_max, y_max, w_max, h_max) = cv2.boundingRect(c)
-            # If exist max box.
+            sil_y_list, sil_x_list = (self.thresh > 100).nonzero()  # return the position of pix value>100
+            x_topleft, y_topleft = sil_x_list.min(), sil_y_list.min()
+            x_botright, y_botright = sil_x_list.max(), sil_y_list.max()
+            w = x_botright - x_topleft
+            h = y_botright - y_topleft
+            max_rec = w * h
+            # If exist  box.
             if max_rec > 0:
-                cv2.rectangle(frame, (x_max, y_max), (x_max + w_max, y_max + h_max), (0, 255, 0), 2)
-                if x_max > 20:  # To ignore some regions which contain parts of human body.
-                    if self.register_state or self.recognition_state:
-                        nim = np.zeros([thresh.shape[0] + 10, thresh.shape[1] + 10],
-                                       np.single)  # Enlarge the box for better result.
-                        nim[y_max + 5:(y_max + h_max + 5), x_max + 5:(x_max + w_max + 5)] = thresh[
-                                                                                            y_max:(y_max + h_max),
-                                                                                            x_max:(x_max + w_max)]
-                        offsetX = 20
-                        # Get coordinate position.
-                        ty, tx = (nim > 100).nonzero()  # return the position of pix value>100
-                        sy, ey = ty.min(), ty.max() + 1
-                        sx, ex = tx.min(), tx.max() + 1
-                        h = ey - sy
-                        w = ex - sx
-                        if h > w:  # Normal human should be like this, the height shoud be greater than wideth.
-                            # Calculate the frame for GEI
-                            cx = int(tx.mean())
-                            cenX = h / 2
-                            start_w = (h - w) / 2
-                            if max(cx - sx, ex - cx) < cenX:
-                                start_w = cenX - (cx - sx)
-                            tim = np.zeros((h, h), np.single)
-                            start_w = int(start_w)
-                            tim[:, start_w:start_w + w] = nim[sy:ey, sx:ex]
-                            rim = Image.fromarray(np.uint8(tim)).resize((128, 128),
-                                                                        Image.ANTIALIAS)  # from ndtype to PIL,
-                            # then resize the image to (128,128)
-                            tim = np.array(rim)[:, offsetX:offsetX + 88]
-                            if self.numInGEI < self.gei_fix_num:
-                                self.gei_current += tim  # Add up until reaching the fix number.
-                            self.numInGEI += 1
+                cv2.rectangle(frame, (x_topleft, y_topleft), (x_botright, y_botright), (0, 255, 0), 2)
+                # when click register or recognition every time,the GEI will be calculate again
+                if self.register_state or self.recognition_state:
+                    # Get coordinate position.
+                    ty, tx = sil_y_list, sil_x_list  # return the position of pix value>100
+                    sy, ey = ty.min(), ty.max() + 1
+                    sx, ex = tx.min(), tx.max() + 1
+                    h = ey - sy
+                    w = ex - sx
+                    if h > w:  # Normal human should be like this, the height shoud be greater than wideth.
+                        # Calculate the frame for GEI
+                        cx = int(tx.mean())
+                        cenX = h / 2
+                        start_w = (h - w) / 2
+                        if max(cx - sx, ex - cx) < cenX:
+                            start_w = cenX - (cx - sx)
+                        tim = np.zeros((h, h), np.single)
+                        start_w = int(start_w)
+                        tim[:, start_w:start_w + w] = self.thresh[sy:ey, sx:ex]
+                        rim = Image.fromarray(np.uint8(tim)).resize((88, 128),
+                                                                    Image.ANTIALIAS)  # from ndtype to PIL,
+                        # then resize the image to (88,128)
+                        tim = np.array(rim)[:]
+                        if self.numInGEI < self.gei_fix_num:
+                            self.gei_current += tim  # Add up until reaching the fix number.
+                            print(self.numInGEI)
+                        self.numInGEI += 1
 
-                        if self.numInGEI > self.gei_fix_num:
-                            if self.save_on:
-                                # Save the GEI.
-                                self.gei[self.num, :, :] = self.gei_current / self.gei_fix_num
-                                Image.fromarray(np.uint8(self.gei_current / self.gei_fix_num)).save(
-                                    './gei/gei%02d%s.jpg' % (
-                                        self.num, self.id_name.toPlainText()))  # save the user GEI to local
-                                self.name.append(self.id_name.toPlainText())  # save user name
-                                self.num += 1
-                                self.id_num.setText('%d' % self.num)  # show total number of users
-                                dic = {'num': self.num, 'gei': self.gei,
-                                       'name': self.name}  # save user name and GEI with dictionary
-                                pickle2(self.data_path, dic, compress=False)
-                                self.save_on = False
-                                self.state_print.setText('Saved!')
-                            elif self.recognition_state:
-                                # Recognition.
-                                self.gei_query = self.gei_current / self.gei_fix_num  # get current GEI
-                                score = np.zeros(self.num)
-                                self.gei_to_com = np.zeros([128, 88], np.single)  # the GEI from the database
-                                for q in range(self.num):
-                                    self.gei_to_com = self.gei[q, :, :]
-                                    score[q] = np.exp(-(((self.gei_query[:] - self.gei_to_com[:]) / (
-                                            128 * 88)) ** 2).sum())  # Compare with gait database.
-                                q_id = score.argmax()
-                                if True:
-                                    id_rec = '%s' % self.name[q_id]
-                                    cv2.putText(frame, id_rec, (x_max + 20, y_max + 20),
-                                                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1.0, thickness=2,
-                                                color=(0, 0, 255))
+                    if self.numInGEI > self.gei_fix_num:
+                        if self.save_on:
+                            # Save the GEI.
+                            self.gei[self.num, :, :] = self.gei_current / self.gei_fix_num
+                            Image.fromarray(np.uint8(self.gei_current / self.gei_fix_num)).save(
+                                './gei/gei%02d%s.jpg' % (
+                                    self.num, self.id_name.toPlainText()))  # save the user GEI to local
+                            self.name.append(self.id_name.toPlainText())  # save user name
+                            self.num += 1
+                            self.id_num.setText('%d' % self.num)  # show total number of users
+                            dic = {'num': self.num, 'gei': self.gei,
+                                   'name': self.name}  # save user name and GEI with dictionary
+                            pickle2(self.data_path, dic, compress=False)
+                            self.save_on = False
+                            self.state_print.setText('Saved!')
+                        elif self.recognition_state:
+                            # Recognition.
+                            self.gei_query = self.gei_current / self.gei_fix_num  # get current GEI
+                            score = np.zeros(self.num)
+                            self.gei_to_com = np.zeros([128, 88], np.single)  # the GEI from the database
+                            for q in range(self.num):
+                                self.gei_to_com = self.gei[q, :, :]
+                                score[q] = np.exp(-(((self.gei_query[:] - self.gei_to_com[:]) / (
+                                        128 * 88)) ** 2).sum())  # Compare with gait database.
+                            q_id = score.argmax()
+                            if True:
+                                id_rec = '%s' % self.name[q_id]
+                                cv2.putText(frame, id_rec, (x_topleft + 20, y_topleft + 20),
+                                            fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1.0, thickness=2,
+                                            color=(0, 0, 255))
             else:
                 self.gei_current = np.zeros((128, 88), np.single)
                 self.numInGEI = 0
 
             # Show results.
             self.currentFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            self.currentSeg = Image.fromarray(thresh).convert('RGB')
+            self.currentSeg = Image.fromarray(self.thresh).convert('RGB')
             self.currentSeg = ImageQt(self.currentSeg)
             height, width = self.currentFrame.shape[:2]
             # show fps
