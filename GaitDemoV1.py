@@ -7,6 +7,7 @@ import cv2
 import os
 import pickle
 import realsense_depth as rsd
+import time
 
 # Loading the UI window
 qtCreatorFile = "GaitUI.ui"
@@ -45,24 +46,26 @@ class GaitDemo(QtWidgets.QMainWindow, Ui_MainWindow):
         self.register_state = False
         self.recognition_state = False
         self.save_on = False
-        self.gei_fix_num = 20
-
+        self.gei_fix_num = 20  # the number of calculate GEI
+        self.cTime = 0
+        self.pTime = 0
 
         # Set two window for raw video and segmentation.
         self.video_lable = QtWidgets.QLabel(self.centralwidget)
         self.seg_label = QtWidgets.QLabel(self.centralwidget)
-        self._timer = QtCore.QTimer(self)
+        self._timer = QtCore.QTimer(self)  # open Qt timer
         self.video_lable.setGeometry(50, 200, 640, 480)
         self.seg_label.setGeometry(800, 200, 640, 480)
         self.load_dataset()
-        self._timer.timeout.connect(self.play)
+        self._timer.timeout.connect(self.play)  # response function of Qt timer
 
         # Waiting for you to push the button.
+        # The slot functions from Qt
         self.register_2.clicked.connect(self.register_show)
         self.recognize.clicked.connect(self.recognition_show)
         self.updater.clicked.connect(self.update_bk)
         self.save_gei.clicked.connect(self.save_gei_f)
-        self._timer.start(27)
+        self._timer.start(27)  # the end time of Qt timer
         self.update()
 
     def save_gei_f(self):
@@ -93,8 +96,8 @@ class GaitDemo(QtWidgets.QMainWindow, Ui_MainWindow):
             self.gei = dic['gei']
             self.name = dic['name']
         else:
-            self.num = 0
-            self.gei = np.zeros([100, 128, 88], np.uint8)
+            self.num = 0  # The total number of GEIs that have recorded
+            self.gei = np.zeros([100, 128, 88], np.uint8)  # save all GEIs
             self.name = []
             dic = {'num': self.num, 'gei': self.gei, 'name': self.name}
             pickle2(self.data_path, dic, compress=False)
@@ -126,19 +129,20 @@ class GaitDemo(QtWidgets.QMainWindow, Ui_MainWindow):
         if (ret == True):
             # frame = cv2.resize(frame, (512, 384))
             # Apply background subtraction method.
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            """####################  preprocess  ########################"""
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # bgr to gray
             gray = cv2.GaussianBlur(gray, (3, 3), 0)
             if self.firstFrame is None:
                 self.firstFrame = gray  # Set this frame as the background.
             frameDelta = cv2.absdiff(self.firstFrame, gray)
             thresh = cv2.threshold(frameDelta, 50, 255, cv2.THRESH_BINARY)[1]
             self.FrameForUpdate = gray
-            thresh = cv2.dilate(thresh, None, iterations=2)
+            thresh = cv2.dilate(thresh, None, iterations=2)  # dilate image123
             (cnts, _) = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
-                                         cv2.CHAIN_APPROX_SIMPLE)
+                                         cv2.CHAIN_APPROX_SIMPLE)  # Contour detection
             thresh = np.array(thresh)
             max_rec = 0
-
+            #####################################################################
             # Find the max box.
             for c in cnts:
                 if cv2.contourArea(c) < 500:
@@ -155,13 +159,13 @@ class GaitDemo(QtWidgets.QMainWindow, Ui_MainWindow):
                 if x_max > 20:  # To ignore some regions which contain parts of human body.
                     if self.register_state or self.recognition_state:
                         nim = np.zeros([thresh.shape[0] + 10, thresh.shape[1] + 10],
-                                      np.single)  # Enlarge the box for better result.
+                                       np.single)  # Enlarge the box for better result.
                         nim[y_max + 5:(y_max + h_max + 5), x_max + 5:(x_max + w_max + 5)] = thresh[
                                                                                             y_max:(y_max + h_max),
                                                                                             x_max:(x_max + w_max)]
                         offsetX = 20
                         # Get coordinate position.
-                        ty, tx = (nim > 100).nonzero()
+                        ty, tx = (nim > 100).nonzero()  # return the position of pix value>100
                         sy, ey = ty.min(), ty.max() + 1
                         sx, ex = tx.min(), tx.max() + 1
                         h = ey - sy
@@ -174,8 +178,11 @@ class GaitDemo(QtWidgets.QMainWindow, Ui_MainWindow):
                             if max(cx - sx, ex - cx) < cenX:
                                 start_w = cenX - (cx - sx)
                             tim = np.zeros((h, h), np.single)
+                            start_w = int(start_w)
                             tim[:, start_w:start_w + w] = nim[sy:ey, sx:ex]
-                            rim = Image.fromarray(np.uint8(tim)).resize((128, 128), Image.ANTIALIAS)
+                            rim = Image.fromarray(np.uint8(tim)).resize((128, 128),
+                                                                        Image.ANTIALIAS)  # from ndtype to PIL,
+                            # then resize the image to (128,128)
                             tim = np.array(rim)[:, offsetX:offsetX + 88]
                             if self.numInGEI < self.gei_fix_num:
                                 self.gei_current += tim  # Add up until reaching the fix number.
@@ -186,23 +193,25 @@ class GaitDemo(QtWidgets.QMainWindow, Ui_MainWindow):
                                 # Save the GEI.
                                 self.gei[self.num, :, :] = self.gei_current / self.gei_fix_num
                                 Image.fromarray(np.uint8(self.gei_current / self.gei_fix_num)).save(
-                                    './gei/gei%02d%s.jpg' % (self.num, self.id_name.toPlainText()))
-                                self.name.append(self.id_name.toPlainText())
+                                    './gei/gei%02d%s.jpg' % (
+                                        self.num, self.id_name.toPlainText()))  # save the user GEI to local
+                                self.name.append(self.id_name.toPlainText())  # save user name
                                 self.num += 1
-                                self.id_num.setText('%d' % self.num)
-                                dic = {'num': self.num, 'gei': self.gei, 'name': self.name}
+                                self.id_num.setText('%d' % self.num)  # show total number of users
+                                dic = {'num': self.num, 'gei': self.gei,
+                                       'name': self.name}  # save user name and GEI with dictionary
                                 pickle2(self.data_path, dic, compress=False)
                                 self.save_on = False
                                 self.state_print.setText('Saved!')
                             elif self.recognition_state:
                                 # Recognition.
-                                self.gei_query = self.gei_current / (self.gei_fix_num)
+                                self.gei_query = self.gei_current / self.gei_fix_num  # get current GEI
                                 score = np.zeros(self.num)
-                                self.gei_to_com = np.zeros([128, 88], np.single)
+                                self.gei_to_com = np.zeros([128, 88], np.single)  # the GEI from the database
                                 for q in range(self.num):
                                     self.gei_to_com = self.gei[q, :, :]
                                     score[q] = np.exp(-(((self.gei_query[:] - self.gei_to_com[:]) / (
-                                                128 * 88)) ** 2).sum())  # Compare with gait database.
+                                            128 * 88)) ** 2).sum())  # Compare with gait database.
                                 q_id = score.argmax()
                                 if True:
                                     id_rec = '%s' % self.name[q_id]
@@ -218,11 +227,19 @@ class GaitDemo(QtWidgets.QMainWindow, Ui_MainWindow):
             self.currentSeg = Image.fromarray(thresh).convert('RGB')
             self.currentSeg = ImageQt(self.currentSeg)
             height, width = self.currentFrame.shape[:2]
+            # show fps
+            self.cTime = time.time()
+            fps = 1 / (self.cTime - self.pTime)
+            self.pTime = self.cTime
+            cv2.putText(self.currentFrame, str(int(fps)), (10, 70), cv2.FONT_HERSHEY_PLAIN, 5, (255, 0, 0), 3)
+
             img = QtGui.QImage(self.currentFrame,
-                                   width,
-                                   height,
-                                   QtGui.QImage.Format_RGB888)
+                               width,
+                               height,
+                               QtGui.QImage.Format_RGB888)
+
             img = QtGui.QPixmap.fromImage(img)
+
             self.video_lable.setPixmap(img)
             seg = QtGui.QImage(self.currentSeg)
             seg = QtGui.QPixmap(seg)
