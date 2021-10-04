@@ -1,4 +1,8 @@
 import sys
+import math
+# import matplotlib
+# matplotlib.use('agg')
+import matplotlib.pyplot as plt
 from PyQt5 import QtCore, QtWidgets, uic, QtGui
 import numpy as np
 from PIL import Image
@@ -9,12 +13,15 @@ import pickle
 import realsense_depth as rsd
 import time
 import PoseTrackingModel as ptk
+import io
+import warnings
+warnings.filterwarnings("ignore")
 
 # Loading the UI window
 qtCreatorFile = "GaitUI.ui"
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
-
+strip_list = []
 def pickle2(filename, data, compress=False):
     fo = open(filename, "wb")
     pickle.dump(data, fo, protocol=pickle.HIGHEST_PROTOCOL)  # 序列化对象，并将结果数据流写入到文件对象中
@@ -50,6 +57,7 @@ class GaitDemo(QtWidgets.QMainWindow, Ui_MainWindow):
         self.gei_fix_num = 20  # the number of calculate GEI
         self.cTime = 0
         self.pTime = 0
+        self.count = 0
         self.detector = ptk.PoseDetector()
 
         # Set two window for raw video and segmentation.
@@ -115,7 +123,6 @@ class GaitDemo(QtWidgets.QMainWindow, Ui_MainWindow):
         self.numInGEI = 0
         self.state_print.setText('Recognition!')
 
-
     def play(self):
         '''
         Main program.
@@ -123,12 +130,55 @@ class GaitDemo(QtWidgets.QMainWindow, Ui_MainWindow):
         # ret, frame = self.capture.read()  # Read video from a camera.
         ret, depth_frame, frame = self.capture.get_frame()
         if (ret == True):
+            self.count += 1
             # frame = cv2.resize(frame, (512, 384))
             # Apply background subtraction method.
             """####################  preprocess  ########################"""
             # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # bgr to gray
             # gray = cv2.GaussianBlur(gray, (3, 3), 0)
             img_pose = self.detector.findPose(frame)  # get pose from frame
+            poselist = self.detector.findPosition(img_pose)  # get all landmarks position
+            feature_map = np.zeros((480, 640), np.single)
+            assert len(poselist) == 33, 'Unexpected number of landmarks: {}'.format(
+                len(poselist))  # check number of landmarks that are detected
+            try:
+                cen_x = int((poselist[23][1] + poselist[24][1]) * 0.5)  # get center coordinate
+                cen_y = int((poselist[23][2] + poselist[24][2]) * 0.5)
+                # cv2.circle(feature_map, (cen_x, cen_y), 10, 255, cv2.FILLED)  # center point
+                # cv2.circle(feature_map, (poselist[0][1], poselist[0][2]), 10, 255, cv2.FILLED)  # point 0
+                # cv2.line(feature_map, (poselist[0][1], poselist[0][2]), (cen_x, cen_y), 5)
+                # cv2.circle(feature_map, (poselist[15][1], poselist[15][2]), 10, 255, cv2.FILLED)  # point 15
+                # cv2.line(feature_map, (poselist[15][1], poselist[15][2]), (cen_x, cen_y), 5)
+                # cv2.circle(feature_map, (poselist[16][1], poselist[16][2]), 10, 255, cv2.FILLED)  # point 16
+                # cv2.line(feature_map, (poselist[16][1], poselist[16][2]), (cen_x, cen_y), 5)
+                # cv2.circle(feature_map, (poselist[27][1], poselist[27][2]), 10, 255, cv2.FILLED)  # point 27
+                # cv2.line(feature_map, (poselist[27][1], poselist[27][2]), (cen_x, cen_y), 5)
+                # cv2.circle(feature_map, (poselist[28][1], poselist[28][2]), 10, 255, cv2.FILLED)  # point 28
+                # cv2.line(feature_map, (poselist[28][1], poselist[28][2]), (cen_x, cen_y), 5)
+                # get gait cycle time
+
+                strip = math.sqrt((poselist[15][1] - poselist[16][1]) ** 2 + (poselist[15][2] - poselist[16][2]) ** 2)
+                strip_list.append(strip)  # save data every frame
+                # fig = plt.figure(figsize=(100,100),facecolor='blue')
+                # plt.figure()
+                plt.plot(strip_list, linewidth=3)  # 线条粗3号
+                plt.grid(axis='y', alpha=0.75)  # 只显示y轴网格线
+                plt.xlabel('Frame')  # 坐标轴名字
+                plt.ylabel('Stride')
+                # Convert plot to image
+                # buf = io.BytesIO()
+                # fig.savefig(buf)
+                # buf.seek(0)
+                # img = Image.open(buf)
+                # plt.close()
+                # cv2.imshow(img)
+                # plt.plot(self.count, strip, 'ro-', color='blue')
+                # plt.draw()
+                # plt.show()
+            except IndexError:
+                print("IndexError error")
+            # cv2.imshow("feature map", feature_map)
+            # cv2.imshow("123",img_pose)
             # remove background and create Silhouettes
             annotated_image = np.zeros((480, 640), dtype=np.uint8)
             try:
@@ -154,6 +204,7 @@ class GaitDemo(QtWidgets.QMainWindow, Ui_MainWindow):
             # If exist  box.
             if max_rec > 0:
                 cv2.rectangle(frame, (x_topleft, y_topleft), (x_botright, y_botright), (0, 255, 0), 2)
+                cv2.rectangle(self.thresh, (x_topleft, y_topleft), (x_botright, y_botright), (255), 2)
                 # when click register or recognition every time,the GEI will be calculate again
                 if self.register_state or self.recognition_state:
                     # Get coordinate position.
